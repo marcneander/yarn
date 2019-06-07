@@ -7,6 +7,7 @@ import NoopReporter from '../../reporters/base-reporter.js';
 import {Install} from './install.js';
 import Lockfile from '../../lockfile';
 import buildSubCommands from './_build-sub-commands.js';
+import fs from 'fs';
 
 const invariant = require('invariant');
 
@@ -132,79 +133,17 @@ export const {run, examples} = buildSubCommands('licenses', {
   },
 
   async generateDisclaimer(config: Config, reporter: Reporter, flags: Object, args: Array<string>): Promise<void> {
-    /* eslint-disable no-console */
-
-    // `reporter.log` dumps a bunch of ANSI escapes to clear the current line and
-    // is for abstracting the console output so it can be consumed by other tools
-    // (JSON output being the primary one). This command is only for text consumption
-    // and you should just be dumping it to a TXT file. Using a reporter here has the
-    // potential to mess up the output since it might print ansi escapes.
-    // @kittens - https://git.io/v7uts
-
     const manifests: Array<Manifest> = await getManifests(config, flags);
-    const manifest = await config.readRootManifest();
+    const data = [];
 
-    // Create a map of license text to manifest so that packages with exactly
-    // the same license text are grouped together.
-    const manifestsByLicense: Map<string, Map<string, Manifest>> = new Map();
     for (const manifest of manifests) {
-      const {licenseText, noticeText} = manifest;
-      let licenseKey;
-      if (!licenseText) {
-        continue;
-      }
+      const { name, version, licenseText, license, homepage, private: manifestIsPrivate } = manifest;
 
-      if (!noticeText) {
-        licenseKey = licenseText;
-      } else {
-        licenseKey = `${licenseText}\n\nNOTICE\n\n${noticeText}`;
+      if (!manifestIsPrivate) {
+        data.push({ name, version, licenseText: licenseText ? licenseText.trim() : undefined, license, homepage });
       }
-
-      if (!manifestsByLicense.has(licenseKey)) {
-        manifestsByLicense.set(licenseKey, new Map());
-      }
-
-      const byLicense = manifestsByLicense.get(licenseKey);
-      invariant(byLicense, 'expected value');
-      byLicense.set(manifest.name, manifest);
     }
 
-    console.log(
-      'THE FOLLOWING SETS FORTH ATTRIBUTION NOTICES FOR THIRD PARTY SOFTWARE THAT MAY BE CONTAINED ' +
-        `IN PORTIONS OF THE ${String(manifest.name).toUpperCase().replace(/-/g, ' ')} PRODUCT.`,
-    );
-    console.log();
-
-    for (const [licenseKey, manifests] of manifestsByLicense) {
-      console.log('-----');
-      console.log();
-
-      const names = [];
-      const urls = [];
-      for (const [name, {repository}] of manifests) {
-        names.push(name);
-        if (repository && repository.url) {
-          urls.push(manifests.size === 1 ? repository.url : `${repository.url} (${name})`);
-        }
-      }
-
-      const heading = [];
-      heading.push(`The following software may be included in this product: ${names.join(', ')}.`);
-      if (urls.length > 0) {
-        heading.push(`A copy of the source code may be downloaded from ${urls.join(', ')}.`);
-      }
-      heading.push('This software contains the following license and notice below:');
-
-      console.log(heading.join(' '));
-      console.log();
-
-      if (licenseKey) {
-        console.log(licenseKey.trim());
-      } else {
-        // what do we do here? base it on `license`?
-      }
-
-      console.log();
-    }
+    console.log(JSON.stringify(data));
   },
 });

@@ -1,5 +1,5 @@
 {
-  "name": "yarn",
+  "name": "@marcneander/yarn",
   "installationMethod": "unknown",
   "version": "1.17.0-0",
   "license": "BSD-2-Clause",
@@ -109,8 +109,8 @@
   },
   "repository": "yarnpkg/yarn",
   "bin": {
-    "yarn": "./bin/yarn.js",
-    "yarnpkg": "./bin/yarn.js"
+    "forked-yarn": "./bin/yarn.js",
+    "forked-yarnpkg": "./bin/yarn.js"
   },
   "scripts": {
     "build": "gulp build",
